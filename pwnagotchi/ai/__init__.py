@@ -34,7 +34,7 @@ def load(config, agent, epoch, from_disk=True):
         logging.debug("[ai] RecurrentPPO imported in %.2fs" % (time.time() - start))
 
         start = time.time()
-        from sb3_contrib.common.recurrent.policies import MlpLstmPolicy
+        from sb3_contrib.ppo_recurrent.policies import MlpLstmPolicy
         logging.debug("[ai] MlpLstmPolicy imported in %.2fs" % (time.time() - start))
 
         start = time.time()
