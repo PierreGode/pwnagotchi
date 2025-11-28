@@ -237,9 +237,19 @@ def setup_logging(args, config):
     root.addHandler(console_handler)
 
     if not args.debug:
-        # disable scapy and tensorflow logging
-        logging.getLogger("scapy").disabled = True
-        logging.getLogger('tensorflow').disabled = True
+        noisy_loggers = [
+            "scapy",
+            "scapy.runtime",
+            "gym",
+            "gymnasium",
+            "stable_baselines3",
+            "sb3_contrib",
+            "torch"
+        ]
+        for name in noisy_loggers:
+            logger = logging.getLogger(name)
+            logger.disabled = True
+            logger.propagate = False
         # https://stackoverflow.com/questions/15777951/how-to-suppress-pandas-future-warning
         warnings.simplefilter(action='ignore', category=FutureWarning)
         warnings.simplefilter(action='ignore', category=DeprecationWarning)
@@ -247,7 +257,7 @@ def setup_logging(args, config):
         logging.getLogger("urllib3").propagate = False
         requests_log = logging.getLogger("requests")
         requests_log.addHandler(logging.NullHandler())
-        requests_log.prpagate = False
+        requests_log.propagate = False
 
 
 def log_rotation(filename, cfg):

@@ -1,6 +1,10 @@
 import logging
-import gym
-from gym import spaces
+try:
+    import gymnasium as gym
+    from gymnasium import spaces
+except ImportError:  # pragma: no cover - fallback for environments without gymnasium
+    import gym
+    from gym import spaces
 import numpy as np
 
 import pwnagotchi.ai.featurizer as featurizer

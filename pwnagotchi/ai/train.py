@@ -6,6 +6,8 @@ import os
 import json
 import logging
 
+import numpy as np
+
 import pwnagotchi.plugins as plugins
 import pwnagotchi.ai as ai
 
@@ -91,6 +93,9 @@ class AsyncTrainer(object):
         self._training_epochs = 0
         self._nn_path = self._config['ai']['path']
         self._stats = Stats("%s.json" % os.path.splitext(self._nn_path)[0], self)
+        self._vec_env = None
+        self._rnn_state = None
+        self._episode_start = None
 
     def set_training(self, training, for_epochs=0):
         self._is_training = training
@@ -116,8 +121,23 @@ class AsyncTrainer(object):
         self._model.save(temp)
         os.replace(temp, self._nn_path)
 
+    def _render_env(self):
+        if self._model is None:
+            return
+        env = self._model.get_env()
+        if env is not None:
+            env.render()
+
+    def _reset_env(self):
+        if self._vec_env is None:
+            self._vec_env = self._model.get_env()
+        obs = self._vec_env.reset()
+        self._episode_start = np.ones((self._vec_env.num_envs,), dtype=bool)
+        self._rnn_state = None
+        return obs
+
     def on_ai_step(self):
-        self._model.env.render()
+        self._render_env()
 
         if self._is_training:
             self._save_ai()
@@ -125,7 +145,7 @@ class AsyncTrainer(object):
         self._stats.on_epoch(self._epoch.data(), self._is_training)
 
     def on_ai_training_step(self, _locals, _globals):
-        self._model.env.render()
+        self._render_env()
         plugins.on('ai_training_step', self, _locals, _globals)
 
     def on_ai_policy(self, new_params):
@@ -162,13 +182,14 @@ class AsyncTrainer(object):
         self._model = ai.load(self._config, self, self._epoch)
 
         if self._model:
+            self._vec_env = self._model.get_env()
             self.on_ai_ready()
 
             epochs_per_episode = self._config['ai']['epochs_per_episode']
 
             obs = None
             while True:
-                self._model.env.render()
+                self._render_env()
                 # enter in training mode?
                 if random.random() > self._config['ai']['laziness']:
                     logging.info("[ai] learning for %d epochs ..." % epochs_per_episode)
@@ -179,11 +200,17 @@ class AsyncTrainer(object):
                         logging.exception("[ai] error while training (%s)", e)
                     finally:
                         self.set_training(False)
-                        obs = self._model.env.reset()
+                        obs = self._reset_env()
                 # init the first time
                 elif obs is None:
-                    obs = self._model.env.reset()
+                    obs = self._reset_env()
 
                 # run the inference
-                action, _ = self._model.predict(obs)
-                obs, _, _, _ = self._model.env.step(action)
+                action, self._rnn_state = self._model.predict(
+                    obs,
+                    state=self._rnn_state,
+                    episode_start=self._episode_start,
+                    deterministic=False
+                )
+                obs, _, dones, _ = self._vec_env.step(action)
+                self._episode_start = dones.astype(bool)

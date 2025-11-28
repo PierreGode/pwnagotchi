@@ -55,7 +55,22 @@ def version(version_file):
     return None
 
 
-if strtobool(os.environ.get("PWNAGOTCHI_ENABLE_INSTALLER", "1")):
+def _can_run_installer():
+    if not strtobool(os.environ.get("PWNAGOTCHI_ENABLE_INSTALLER", "1")):
+        return False
+
+    if hasattr(os, "geteuid") and os.geteuid() != 0:
+        print("installer skipped: root privileges required")
+        return False
+
+    if shutil.which("systemctl") is None:
+        print("installer skipped: systemctl not available on this platform")
+        return False
+
+    return True
+
+
+if _can_run_installer():
     installer()
 
 with open('requirements.txt') as fp:
@@ -73,12 +88,18 @@ setup(name='pwnagotchi',
       license='GPL',
       install_requires=required,
       scripts=['bin/pwnagotchi'],
-      package_data={'pwnagotchi': ['defaults.yml', 'pwnagotchi/defaults.yml', 'locale/*/LC_MESSAGES/*.mo']},
+      package_data={'pwnagotchi': ['defaults.toml', 'locale/*/LC_MESSAGES/*.mo']},
       include_package_data=True,
       packages=find_packages(),
+      python_requires='>=3.10,<3.14',
       classifiers=[
           'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11',
+          'Programming Language :: Python :: 3.12',
+          'Programming Language :: Python :: 3.13',
           'Development Status :: 5 - Production/Stable',
           'License :: OSI Approved :: GNU General Public License (GPL)',
           'Environment :: Console',
+          'Operating System :: POSIX :: Linux',
       ])

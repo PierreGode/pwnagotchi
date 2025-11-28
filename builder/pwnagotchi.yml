@@ -36,17 +36,11 @@
         - dnsmasq.service
     packages:
       bettercap:
-        url: "https://github.com/bettercap/bettercap/releases/download/v2.31.0/bettercap_linux_armhf_v2.31.0.zip"
+        url: "https://github.com/bettercap/bettercap/releases/download/v2.31.0/bettercap_linux_arm64_v2.31.0.zip"
         ui: "https://github.com/bettercap/ui/releases/download/v1.3.0/ui.zip"
       pwngrid:
-        url: "https://github.com/evilsocket/pwngrid/releases/download/v1.10.3/pwngrid_linux_armhf_v1.10.3.zip"
+        url: "https://github.com/evilsocket/pwngrid/releases/download/v1.10.3/pwngrid_linux_arm64_v1.10.3.zip"
       apt:
-        hold:
-          - firmware-atheros
-          - firmware-brcm80211
-          - firmware-libertas
-          - firmware-misc-nonfree
-          - firmware-realtek
         remove:
           - raspberrypi-net-mods
           - dhcpcd5
@@ -60,44 +54,35 @@
           - golang
           - git
           - build-essential
+          - python3
+          - python3-dev
           - python3-pip
-          - python3-mpi4py
+          - python3-venv
           - python3-smbus
           - unzip
           - gawk
+          - pkg-config
           - libopenmpi-dev
           - libatlas-base-dev
-          - libjasper-dev
-          - libqtgui4
-          - libqt4-test
           - libopenjp2-7
           - libtiff5
           - tcpdump
           - lsof
-          - libilmbase23
-          - libopenexr23
+          - libilmbase25
+          - libopenexr25
           - libgstreamer1.0-0
-          - libavcodec58
-          - libavformat58
-          - libswscale5
+          - libavcodec60
+          - libavformat60
+          - libswscale7
           - libpcap-dev
           - libusb-1.0-0-dev
           - libnetfilter-queue-dev
           - libopenmpi3
           - dphys-swapfile
-          - kalipi-kernel
-          - kalipi-bootloader
-          - kalipi-re4son-firmware
-          - kalipi-kernel-headers
-          - libraspberrypi0
-          - libraspberrypi-dev
-          - libraspberrypi-doc
-          - libraspberrypi-bin
           - fonts-dejavu
           - fonts-dejavu-core
           - fonts-dejavu-extra
           - python3-pil
-          - python3-smbus
           - libfuse-dev
           - bc
           - fonts-freefont-ttf
@@ -127,32 +112,6 @@
       regexp: '^ExecStart=/usr/lib/bluetooth/bluetoothd$'
       line: 'ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap'
       state: present
-
-  - name: Add re4son-kernel repo key
-    apt_key:
-      url: https://re4son-kernel.com/keys/http/archive-key.asc
-      state: present
-
-  - name: Add re4son-kernel repository
-    apt_repository:
-      repo: deb http://http.re4son-kernel.com/re4son/ kali-pi main
-      state: present
-
-  - name: create /etc/apt/preferences.d/kali.pref
-    copy:
-      dest: /etc/apt/preferences.d/kali.pref
-      force: yes
-      content: |
-        # ensure kali packages that are installed take precedence
-        Package: *
-        Pin: release n=kali-pi
-        Pin-Priority: 999
-
-  - name: add firmware packages to hold
-    dpkg_selections:
-      name: "{{ item }}"
-      selection: hold
-    with_items: "{{ packages.apt.hold }}"
 
   - name: update apt package cache
     apt:
@@ -251,18 +210,6 @@
     args:
       chdir: /usr/local/src/pwnagotchi
     when: (pwnagotchigit.changed) or (pip_packages['pwnagotchi'] is undefined) or (pip_packages['pwnagotchi'] != pwnagotchi_version)
-
-  - name: install opencv-python
-    pip:
-      name: "https://www.piwheels.org/simple/opencv-python/opencv_python-3.4.3.18-cp37-cp37m-linux_armv6l.whl"
-      extra_args: "--no-deps --no-cache-dir --platform=linux_armv6l --only-binary=:all: --target={{ pip_target.stdout }}"
-    when: (pip_packages['opencv-python'] is undefined) or (pip_packages['opencv-python'] != '3.4.3.18')
-
-  - name: install tensorflow
-    pip:
-      name: "https://www.piwheels.org/simple/tensorflow/tensorflow-1.13.1-cp37-none-linux_armv6l.whl"
-      extra_args: "--no-deps --no-cache-dir --platform=linux_armv6l --only-binary=:all: --target={{ pip_target.stdout }}"
-    when: (pip_packages['tensorflow'] is undefined) or (pip_packages['tensorflow'] != '1.13.1')
 
   - name: install pwnagotchi wheel and dependencies
     pip:
