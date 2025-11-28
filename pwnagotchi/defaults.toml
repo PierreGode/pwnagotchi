@@ -208,7 +208,7 @@ ui.web.on_frame = ""
 
 ui.display.enabled = true
 ui.display.rotation = 180
-ui.display.type = "waveshare_2"
+ui.display.type = "waveshare213_v4"
 ui.display.color = "black"
 
 bettercap.scheme = "http"
