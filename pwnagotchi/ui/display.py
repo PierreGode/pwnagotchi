@@ -73,6 +73,9 @@ class Display(View):
     def is_waveshare213bc(self):
         return self._implementation.name == 'waveshare213bc'
 
+    def is_waveshare213_v4(self):
+        return self._implementation.name == 'waveshare213_v4'
+
     def is_waveshare213inb_v4(self):
         return self._implementation.name == 'waveshare213inb_v4'
 
@@ -83,7 +86,12 @@ class Display(View):
         return self._implementation.name == 'spotpear24inch'
 
     def is_waveshare_any(self):
-        return self.is_waveshare_v1() or self.is_waveshare_v2()
+        return (
+            self.is_waveshare_v1() or
+            self.is_waveshare_v2() or
+            self.is_waveshare_v3() or
+            self.is_waveshare213_v4()
+        )
 
     def init_display(self):
         if self._enabled:

@@ -19,3 +19,4 @@ dbus-python>=1.3.2
 toml>=0.10.2
 python-dateutil>=2.9.0.post0
 websockets>=12.0
+waveshare-epd>=1.2.0
