@@ -1,6 +1,7 @@
 from threading import Event
 import _thread
 import logging
+import os
 import time
 
 import pwnagotchi.plugins as plugins
@@ -18,17 +19,26 @@ class Led(plugins.Plugin):
         self._event_name = None
         self._led_file = "/sys/class/leds/led0/brightness"
         self._delay = 200
+        self._disabled = False
 
     # called when the plugin is loaded
     def on_loaded(self):
         self._led_file = "/sys/class/leds/led%d/brightness" % self.options['led']
         self._delay = int(self.options['delay'])
 
+        if not os.path.exists(self._led_file):
+            self._disabled = True
+            logging.warning("[led] %s not found, disabling LED plugin", self._led_file)
+            return
+
         logging.info("[led] plugin loaded for %s" % self._led_file)
         self._on_event('loaded')
         _thread.start_new_thread(self._worker, ())
 
     def _on_event(self, event):
+        if self._disabled:
+            return
+
         if not self._is_busy:
             self._event_name = event
             self._event.set()
@@ -37,8 +47,15 @@ class Led(plugins.Plugin):
             logging.debug("[led] skipping event '%s' because the worker is busy", event)
 
     def _led(self, on):
-        with open(self._led_file, 'wt') as fp:
-            fp.write(str(on))
+        try:
+            with open(self._led_file, 'wt') as fp:
+                fp.write(str(on))
+        except FileNotFoundError:
+            self._disabled = True
+            logging.warning("[led] %s disappeared, disabling plugin", self._led_file)
+        except Exception:
+            logging.exception("[led] unable to toggle %s", self._led_file)
+            self._disabled = True
 
     def _blink(self, pattern):
         logging.debug("[led] using pattern '%s' ..." % pattern)
