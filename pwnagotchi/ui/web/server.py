@@ -9,6 +9,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 from flask import Flask
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.serving import make_server
 
 from pwnagotchi.ui.web.handler import Handler
 
@@ -45,6 +46,7 @@ class Server:
 
             logging.info("web ui available at http://%s:%d/" % (self._address, self._port))
 
-            app.run(host=self._address, port=self._port, debug=False, use_reloader=False)
+            server = make_server(self._address, self._port, app, threaded=True)
+            server.serve_forever()
         else:
             logging.info("could not get ip of usb0, video server not starting")
