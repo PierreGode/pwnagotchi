@@ -4,6 +4,7 @@ import threading
 
 import pwnagotchi.plugins as plugins
 import pwnagotchi.ui.hw as hw
+from pwnagotchi.ui.hw.base import DisplayInitError
 from pwnagotchi.ui.view import View
 
 
@@ -95,14 +96,20 @@ class Display(View):
 
     def init_display(self):
         if self._enabled:
-            self._implementation.initialize()
-            plugins.on('display_setup', self._implementation)
+            try:
+                self._implementation.initialize()
+                plugins.on('display_setup', self._implementation)
+            except DisplayInitError as exc:
+                self._enabled = False
+                logging.error("display initialization failed: %s", exc)
+                logging.warning("display disabled; continuing without e-paper output")
         else:
             logging.warning("display module is disabled")
         self.on_render(self._on_view_rendered)
 
     def clear(self):
-        self._implementation.clear()
+        if self._enabled and self._implementation is not None:
+            self._implementation.clear()
 
     def image(self):
         img = None

@@ -1,6 +1,10 @@
 import pwnagotchi.ui.fonts as fonts
 
 
+class DisplayInitError(RuntimeError):
+    """Raised when a display cannot be initialized."""
+
+
 class DisplayImpl(object):
     def __init__(self, config, name):
         self.name = name

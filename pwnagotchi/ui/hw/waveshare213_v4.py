@@ -1,7 +1,8 @@
 import logging
+import time
 
 import pwnagotchi.ui.fonts as fonts
-from pwnagotchi.ui.hw.base import DisplayImpl
+from pwnagotchi.ui.hw.base import DisplayImpl, DisplayInitError
 
 
 class Waveshare213V4(DisplayImpl):
@@ -41,11 +42,32 @@ class Waveshare213V4(DisplayImpl):
             logging.error(
                 "waveshare_epd.epd2in13_V4 is not available; install the waveshare-epd package"
             )
-            raise exc
+            raise DisplayInitError("waveshare-epd package missing") from exc
 
-        self._display = epd2in13_V4.EPD()
-        self._display.init()
-        self._display.Clear(0xFF)
+        deadline = time.time() + 180  # allow ~3 minutes for Ragnar to release GPIOs
+        attempt = 0
+        last_error = None
+
+        while time.time() < deadline:
+            attempt += 1
+            try:
+                self._display = epd2in13_V4.EPD()
+                self._display.init()
+                self._display.Clear(0xFF)
+                return
+            except Exception as exc:
+                last_error = exc
+                message = str(exc)
+                if 'GPIO busy' in message or 'Device or resource busy' in message:
+                    logging.warning(
+                        "waveshare epd2in13_V4 GPIO busy (attempt %d), waiting for display to be freed...",
+                        attempt
+                    )
+                    time.sleep(5)
+                    continue
+                raise DisplayInitError("failed to initialize epd2in13_V4") from exc
+
+        raise DisplayInitError("epd2in13_V4 display still busy after 3 minutes") from last_error
 
     def render(self, canvas):
         buf = self._display.getbuffer(canvas)
