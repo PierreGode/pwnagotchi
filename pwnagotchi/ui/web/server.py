@@ -2,6 +2,7 @@ import _thread
 import secrets
 import logging
 import os
+import time
 
 # https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -46,7 +47,28 @@ class Server:
 
             logging.info("web ui available at http://%s:%d/" % (self._address, self._port))
 
-            server = make_server(self._address, self._port, app, threaded=True)
+            deadline = time.time() + 180  # give Ragnar time to free port 8000
+            attempt = 0
+            server = None
+
+            while time.time() < deadline:
+                attempt += 1
+                try:
+                    server = make_server(self._address, self._port, app, threaded=True)
+                    break
+                except OSError as exc:
+                    logging.warning(
+                        "web ui port %d busy (attempt %d): %s; retrying...",
+                        self._port,
+                        attempt,
+                        exc
+                    )
+                    time.sleep(5)
+
+            if server is None:
+                logging.error("web ui failed to bind %s:%d after 3 minutes; disabling web UI", self._address, self._port)
+                return
+
             server.serve_forever()
         else:
             logging.info("could not get ip of usb0, video server not starting")
