@@ -41,6 +41,13 @@ window.onload = function() {
 				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 			</form>
 		</li>
+		<li>
+			<form class="action" method="post" action="/swap/ragnar"
+          onsubmit="return confirm('This will start Ragnar and stop Pwnagotchi. Continue?');">
+				<input type="submit" class="button ui-btn ui-corner-all" value="Switch to Ragnar"/>
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+			</form>
+		</li>
 	</ul>
 </div>
 {% endblock %}

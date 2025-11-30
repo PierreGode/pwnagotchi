@@ -4,6 +4,7 @@ import base64
 import _thread
 import secrets
 import json
+import subprocess
 from functools import wraps
 
 # https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
@@ -36,6 +37,7 @@ class Handler:
         self._app.add_url_rule('/shutdown', 'shutdown', self.with_auth(self.shutdown), methods=['POST'])
         self._app.add_url_rule('/reboot', 'reboot', self.with_auth(self.reboot), methods=['POST'])
         self._app.add_url_rule('/restart', 'restart', self.with_auth(self.restart), methods=['POST'])
+        self._app.add_url_rule('/swap/ragnar', 'swap_ragnar', self.with_auth(self.swap_ragnar), methods=['POST'])
 
         # inbox
         self._app.add_url_rule('/inbox', 'inbox', self.with_auth(self.inbox))
@@ -221,6 +223,28 @@ class Handler:
                                    message='Restarting in %s mode ...' % mode)
         finally:
             _thread.start_new_thread(pwnagotchi.restart, (mode,))
+
+    def _swap_to_ragnar(self):
+        commands = [
+            ['systemctl', '--no-block', 'start', 'ragnar.service'],
+            ['systemctl', '--no-block', 'stop', 'pwnagotchi.service']
+        ]
+
+        for cmd in commands:
+            try:
+                logging.info("swap-to-ragnar executing: %s", ' '.join(cmd))
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as exc:
+                logging.error("swap to Ragnar failed: %s", exc)
+            except Exception as exc:
+                logging.exception("unexpected error while swapping to Ragnar")
+
+    def swap_ragnar(self):
+        try:
+            return render_template('status.html', title=pwnagotchi.name(), go_back_after=5,
+                                   message='Switching to Ragnar... hold tight!')
+        finally:
+            _thread.start_new_thread(self._swap_to_ragnar, ())
 
     # serve the PNG file with the display image
     def ui(self):
