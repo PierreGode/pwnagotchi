@@ -1,4 +1,7 @@
-from gym import spaces
+try:
+    from gymnasium import spaces
+except ImportError:  # pragma: no cover
+    from gym import spaces
 
 
 class Parameter(object):
