@@ -28,30 +28,46 @@ class AsyncAdvertiser(object):
         }
         self._peers = {}
         self._closest_peer = None
+        self._grid_ready = False
 
     def fingerprint(self):
         return self._keypair.fingerprint
 
     def _update_advertisement(self, s):
+        if not self._grid_ready:
+            return
         self._advertisement['pwnd_run'] = len(self._handshakes)
         self._advertisement['pwnd_tot'] = utils.total_unique_handshakes(self._config['bettercap']['handshakes'])
         self._advertisement['uptime'] = pwnagotchi.uptime()
         self._advertisement['epoch'] = self._epoch.epoch
-        grid.set_advertisement_data(self._advertisement)
+        try:
+            grid.set_advertisement_data(self._advertisement)
+        except Exception as exc:
+            logging.debug("pwngrid advertisement update failed: %s", exc)
 
     def start_advertising(self):
         if self._config['personality']['advertise']:
-            _thread.start_new_thread(self._adv_poller, ())
+            try:
+                grid.set_advertisement_data(self._advertisement)
+                grid.advertise(True)
+            except Exception as exc:
+                logging.warning("pwngrid unavailable, disabling advertising: %s", exc)
+                return
 
-            grid.set_advertisement_data(self._advertisement)
-            grid.advertise(True)
+            self._grid_ready = True
+            _thread.start_new_thread(self._adv_poller, ())
             self._view.on_state_change('face', self._on_face_change)
         else:
             logging.warning("advertising is disabled")
 
     def _on_face_change(self, old, new):
+        if not self._grid_ready:
+            return
         self._advertisement['face'] = new
-        grid.set_advertisement_data(self._advertisement)
+        try:
+            grid.set_advertisement_data(self._advertisement)
+        except Exception as exc:
+            logging.debug("pwngrid face update failed: %s", exc)
 
     def cumulative_encounters(self):
         return sum(peer.encounters for _, peer in self._peers.items())
@@ -72,6 +88,8 @@ class AsyncAdvertiser(object):
         time.sleep(20)
         while True:
             try:
+                if not self._grid_ready:
+                    return
                 logging.debug("polling pwngrid-peer for peers ...")
 
                 grid_peers = grid.peers()
